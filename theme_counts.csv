@@ -1,11 +1,14 @@
-themes,reviews,share_of_reviews
-Other / unclear,389,48.6
-ETA / live tracking,101,12.6
-Launch failure / crash,97,12.1
-Login / OTP / account,96,12.0
-Feedback / helpdesk / support,57,7.1
-Routing / long commute,51,6.4
-Slow loading / offline,37,4.6
-Booking clarity / no-show,33,4.1
-Forced or blocking steps,10,1.2
-Ads,1,0.1
+themes,reviews,share_of_reviews,share_of_specific
+Generic / no detail,191,23.9,
+Cab / driver / service,110,13.8,18.1
+Login / OTP / logout,109,13.6,17.9
+New update / UI confusion,102,12.8,16.7
+Other / unclear,85,10.6,14.0
+Launch failure / crash,79,9.9,13.0
+Slow loading / offline,71,8.9,11.7
+ETA / live tracking,63,7.9,10.3
+Routing / pickup points,60,7.5,9.9
+Feedback / helpdesk / support,58,7.2,9.5
+Booking / no-show / cancel,45,5.6,7.4
+Blocking or intrusive prompts,33,4.1,5.4
+Ads,1,0.1,0.2

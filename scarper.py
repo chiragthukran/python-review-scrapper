@@ -15,23 +15,29 @@ import re
 import pandas as pd
 
 THEMES = {
-    "Launch failure / crash": r"crash|not (open|work)|won'?t open|not opening|app error|opens? and clos|force clos|reinstall|uninstall|stuck on|keeps? (closing|stopping)|not able to open",
-    "ETA / live tracking": r"\beta\b|live track|tracking|\bgps\b|location|map (is |gets )?stuck|map|cab (arriv|location)|real.?time|arrival time",
-    "Forced or blocking steps": r"force[ds]? (me|to)|no skip|can'?t skip|compulsor|policy accept|accept(ing)? policy|seat ?belt|otp (keeps|disappear|hidden)|every time i open|every ride",
-    "Feedback / helpdesk / support": r"feedback|helpdesk|help desk|customer (care|support)|support|no response|not responding|call (disconnect|drop)|complain",
-    "Routing / long commute": r"rout(e|ing)|detour|pick.?up (time|point)|drop.?(time|order)|hours? to reach|2 hours|long (commute|travel)|clubb",
-    "Slow loading / offline": r"slow|load(ing)? time|takes? .{0,10}seconds|lag|offline|no (network|internet)|cache",
-    "Booking clarity / no-show": r"book(ing)? (not|fail|confus|step)|2.?step|no.?show|check.?in|cancel|wrong (date|day)|next day",
-    "Login / OTP / account": r"log.?in|sign.?in|\botp\b|password|register|verification",
+    "Launch failure / crash": r"not (down)?loaded from play ?store|showing not installed|not installed|not installed (from|thru|through) play ?store|rooted device|blank screen|not (opening|opened)|not able to open|unable to open|(doesn'?t|wont|won'?t|can'?t|cannot) open|app (stopped|not) working|not working (properly|at all)|crash|force clos|reinstall|uninstall|stuck on|something went wrong|app error|opens? and clos|keeps? (closing|stopping)",
+    "Login / OTP / logout": r"\botp\b|log.?(in|out)|sign.?(in|out)|logged out|logging out|verif|register|password|session expired",
+    "ETA / live tracking": r"\beta\b|live (track|location)|tracking|\bgps\b|real.?time|map (is |gets )?(stuck|zoom)|zoom|location (not|is not|wrong|incorrect|update|has)|cab tracker|arrival time|(driver|cab|vehicle) location",
+    "Blocking or intrusive prompts": r"pop.?ups?|excessively notif|permission|microphone|\bmic\b|seat ?belt|forc(e|ed|ing)|compulsor|no skip|skip|terms and conditions|policy accept|accept(ing)? policy|too many notifications|notification(s)? (spam|all day)|keeps? (asking|giving) (for )?(rating|notification)",
+    "Cab / driver / service": r"driver|cab (is |was |are )?(late|not|never)|always late|late by|delay|rude|vendor|transport (team|management|help|desk)|cab management|service",
+    "Feedback / helpdesk / support": r"feedback|helpdesk|help desk|customer (care|support)|support|no response|not responding|call (disconnect|drop)|complain|raise a",
+    "Routing / pickup points": r"rout(e|ing)|detour|pick.?up (time|point|location)|nodal|clubb|hours? to reach|long (commute|travel)",
+    "Slow loading / offline": r"slow|load(ing)? (time|forever)|takes? .{0,12}(seconds|forever)|lag|hang|offline|no (network|internet)|cache",
+    "Booking / no-show / cancel": r"book(ing|ed)? (not|fail|confus|step)|2.?step|no.?show|check.?in|cancel|wrong (date|day)|next day|waitlist|unable to (book|schedule)",
+    "New update / UI confusion": r"update|new (ui|version|feature)|\bui\b|\bux\b|confus|old version|redesign|user.?friendly",
     "Ads": r"\bads?\b|advertis",
 }
+GENERIC = "Generic / no detail"
 OTHER = "Other / unclear"
 COMPILED = {k: re.compile(v, re.I) for k, v in THEMES.items()}
 
 
 def tag(text: str):
     hits = [k for k, rx in COMPILED.items() if rx.search(text or "")]
-    return hits or [OTHER]
+    if hits:
+        return hits
+    # short reviews with no keyword hit are usually "worst app" style: no detail to act on
+    return [GENERIC] if len((text or "").split()) <= 8 else [OTHER]
 
 
 def fetch(app_id, stars, per_star, lang, country):
@@ -78,11 +84,16 @@ def main():
     exploded = df.explode("themes")
     counts = exploded["themes"].value_counts().rename("reviews").to_frame()
     counts["share_of_reviews"] = (counts["reviews"] / len(df) * 100).round(1)
+    n_generic = int((df["themes"].apply(lambda t: t == [GENERIC])).sum())
+    specific = max(len(df) - n_generic, 1)
+    counts["share_of_specific"] = (counts["reviews"] / specific * 100).round(1)
+    counts.loc[GENERIC, "share_of_specific"] = float("nan") if GENERIC in counts.index else None
     counts.to_csv("theme_counts.csv")
 
     print(f"App: {a.app}")
     print(f"Reviews: {len(df)} ({', '.join(str(s) + '-star' for s in a.stars)})")
     print(f"Date range: {df['at'].min().date()} to {df['at'].max().date()}")
+    print(f"Reviews with no detail ('worst app' style): {n_generic}")
     if "replyContent" in df:
         print(f"Developer replied to: {df['replyContent'].notna().mean() * 100:.1f}% of these reviews")
     print()
